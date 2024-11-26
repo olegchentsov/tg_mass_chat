@@ -2,3 +2,4 @@ pandas
 telethon==1.37.0
 PyYAML
 openpyxl
+loguru
