@@ -140,3 +140,6 @@ Icon
 # Directories
 .VolumeIcon.icns
 .fseventsd
+
+# Telegram
+.session

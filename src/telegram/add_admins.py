@@ -26,10 +26,13 @@ async def add_admins(client, input_channel, mentor_info):
     :param client: Аутентифицированный клиент Telethon.
     :param input_channel: Объект InputChannel группы.
     :param mentor_info: Информация о наставнике.
+    :return: True, если наставник успешно добавлен, иначе False.
     """
     additional_admins = settings['users'].get('additional_admins', [])
     mentor_tg_username = mentor_info.get('mentor_tg_username')
     mentor_name = mentor_info.get('mentor_name', 'Неизвестный наставник')
+
+    mentor_added = False  # По умолчанию считаем, что наставник не добавлен
 
     try:
         # Добавление наставника как администратора с ограниченными правами
@@ -55,6 +58,7 @@ async def add_admins(client, input_channel, mentor_info):
                     rank='Наставник'
                 ))
                 logger.info(f"Наставник {mentor_name} успешно добавлен как администратор.")
+                mentor_added = True  # Устанавливаем флаг успеха
             except Exception as e:
                 logger.error(f"Ошибка при добавлении наставника {mentor_name}: {e}")
 
@@ -86,3 +90,5 @@ async def add_admins(client, input_channel, mentor_info):
 
     except Exception as e:
         logger.error(f"Общая ошибка при добавлении администраторов: {e}")
+
+    return mentor_added  # Возвращаем статус добавления наставника

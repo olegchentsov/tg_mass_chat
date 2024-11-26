@@ -28,6 +28,7 @@ async def create_group(client, mentor):
 
     :param client: Аутентифицированный клиент Telethon.
     :param mentor: Словарь с информацией о наставнике.
+    :return: Кортеж (input_channel, group_title, invite_link) или (None, None, None) в случае ошибки.
     """
     # Формируем название группы из шаблона из настроек
     group_title = settings['group']['name_format'].format(
@@ -35,6 +36,9 @@ async def create_group(client, mentor):
         mentor_category=mentor['mentor_category'],
         mentor_id=mentor['mentor_id']
     )
+
+    input_channel = None
+    invite_link = None
 
     try:
         # Создание новой супергруппы (мегагруппы)
@@ -55,11 +59,11 @@ async def create_group(client, mentor):
         input_channel = types.InputChannel(channel_id, access_hash)
 
         # Сохранение ссылки-приглашения
-        invite_link = await client(functions.messages.ExportChatInviteRequest(
+        invite_link_result = await client(functions.messages.ExportChatInviteRequest(
             peer=input_channel
         ))
-
-        logger.info(f"Ссылка-приглашение для группы '{group_title}': {invite_link.link}")
+        invite_link = invite_link_result.link
+        logger.info(f"Ссылка-приглашение для группы '{group_title}': {invite_link}")
 
         # Установка аватара группы
         logo_path = os.path.join(os.getcwd(), 'TERRA-logo.jpeg')
@@ -81,8 +85,7 @@ async def create_group(client, mentor):
         else:
             logger.warning(f"Файл '{logo_path}' не найден. Аватар группы не установлен.")
 
-        # Возвращаем объект InputChannel для дальнейшей настройки
-        return input_channel
+        return input_channel, group_title, invite_link
 
     except FloodWaitError as e:
         logger.warning(f"Ошибка FloodWait при создании группы. Ожидание {e.seconds} секунд.")
@@ -91,7 +94,7 @@ async def create_group(client, mentor):
         return await create_group(client, mentor)
     except RPCError as e:
         logger.error(f"Ошибка при создании группы '{group_title}': {e}")
-        return None
     except Exception as e:
         logger.exception(f"Общая ошибка при создании группы '{group_title}': {e}")
-        return None
+
+    return None, None, None

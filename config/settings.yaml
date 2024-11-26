@@ -1,7 +1,6 @@
 users:
   additional_admins:
     - '@oleg_chentsov'
-    - '@APobedonosniy'
 
 group:
   name_format: "{mentor_name} - TERRA, {mentor_category}, 8.0"
