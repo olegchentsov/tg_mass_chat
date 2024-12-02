@@ -22,7 +22,7 @@ if not os.path.exists(SECRETS_FILE):
     logger.critical(f"Файл '{SECRETS_FILE}' не найден. Проверьте, что он существует в папке '{CONFIG_DIR}'.")
     raise FileNotFoundError(f"Файл '{SECRETS_FILE}' не найден.")
 
-with open(SECRETS_FILE, 'r') as file:
+with open(SECRETS_FILE, 'r', encoding='utf-8') as file:
     secrets = yaml.safe_load(file)
 
 API_ID = secrets['telegram']['api_id']
@@ -38,11 +38,19 @@ client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
 # Путь для сохранения результатов
 RESULTS_FILE = "TERRA_Results.xlsx"
 
-# Инициализация Excel-файла для результатов
+# Инициализация Excel-файла для результатов с добавлением столбца 'chat_id'
 if not os.path.exists(RESULTS_FILE):
-    pd.DataFrame(columns=["mentor_name", "mentor_username", "mentor_chat", "chat_link", "mentor_add", "message"]).to_excel(
+    pd.DataFrame(columns=["mentor_name", "mentor_username", "mentor_chat", "chat_link", "chat_id", "mentor_add", "message"]).to_excel(
         RESULTS_FILE, index=False
     )
+    logger.info(f"Создан новый Excel-файл '{RESULTS_FILE}' с необходимыми столбцами.")
+else:
+    # Проверка существующих столбцов и добавление 'chat_id' если отсутствует
+    df_existing = pd.read_excel(RESULTS_FILE)
+    if "chat_id" not in df_existing.columns:
+        df_existing["chat_id"] = ""
+        df_existing.to_excel(RESULTS_FILE, index=False)
+        logger.info(f"Добавлен столбец 'chat_id' в существующий Excel-файл '{RESULTS_FILE}'.")
 
 
 async def process_mentors(mentors_data):
@@ -70,13 +78,15 @@ async def process_mentors(mentors_data):
         invite_link = None
         mentor_added = False
         message_to_mentor = None
+        chat_id = "Не создано"
 
         try:
             logger.info(f"Создание группы для наставника: {mentor_name}")
             input_channel, group_name, invite_link = await create_group(client, mentor_info)
 
             if input_channel:
-                logger.info(f"Группа для наставника '{mentor_name}' успешно создана.")
+                chat_id = input_channel.channel_id
+                logger.info(f"Группа для наставника '{mentor_name}' успешно создана с ID: {chat_id}.")
                 mentor_added = await add_admins(client, input_channel, mentor_info)
                 await configure_chat(client, input_channel, mentor_name)
             else:
@@ -102,10 +112,12 @@ async def process_mentors(mentors_data):
             "mentor_username": mentor_username,
             "mentor_chat": group_name or "Не создано",
             "chat_link": invite_link or "Нет",
+            "chat_id": chat_id,
             "mentor_add": "Да" if mentor_added else "Нет",
             "message": message_to_mentor,
         }
         save_result(RESULTS_FILE, new_row)
+        logger.info(f"Результаты для наставника '{mentor_name}' сохранены в Excel.")
 
 
 async def main():
@@ -141,7 +153,6 @@ async def main():
     finally:
         await client.disconnect()
         logger.info("Клиент Telegram отключен.")
-
 
 # Запуск асинхронного клиента
 if __name__ == "__main__":
